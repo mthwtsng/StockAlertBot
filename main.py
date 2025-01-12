@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import asyncio
 import yfinance as yf
 
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+BOT_TOKEN = "MTMyNjc2MzQyODkxNTcwODAwNA.Gy-A7C.K0Y_pKuFNWdfRHYU45nvsjn3dRgL9LH0kGBZew"
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -40,9 +40,54 @@ async def list_alerts(ctx):
         channel_alerts = alerts.get(ctx.channel.id, [])
         if not channel_alerts:
             await ctx.send("No alerts set for this channel.")
-        else:
-            alert_list = "\n".join([f"{a['ticker']} at ${a['price']:.2f}" for a in channel_alerts])
-            await ctx.send(f"Current alerts:\n{alert_list}")
+            return
+
+        page = 0
+        items_per_page = 5
+        total_pages = (len(channel_alerts) - 1) // items_per_page + 1
+
+        def create_embed():
+            start = page * items_per_page
+            end = start + items_per_page
+            current_alerts = channel_alerts[start:end]
+            description = "\n".join([f"**{a['ticker']}** at ${a['price']:.2f}" for a in current_alerts])
+            embed = discord.Embed(title="Stock Alerts", description=description, color=discord.Color.blue())
+            embed.set_footer(text=f"Page {page + 1}/{total_pages}")
+            return embed
+
+        message = await ctx.send(embed=create_embed())
+
+        # Add reactions
+        if total_pages > 1:
+            await message.add_reaction("⬅️")
+            await message.add_reaction("➡️")
+
+        def check_reaction(reaction, user):
+            return (
+                user == ctx.author
+                and reaction.message.id == message.id
+                and str(reaction.emoji) in ["⬅️", "➡️"]
+            )
+
+        while True:
+            try:
+                reaction, user = await bot.wait_for("reaction_add", timeout=60.0, check=check_reaction)
+                if str(reaction.emoji) == "⬅️" and page > 0:
+                    page -= 1
+                elif str(reaction.emoji) == "➡️" and page < total_pages - 1:
+                    page += 1
+                else:
+                    await message.remove_reaction(reaction.emoji, user)
+                    continue
+
+                await message.edit(embed=create_embed())
+                await message.remove_reaction(reaction.emoji, user)
+            except asyncio.TimeoutError:
+                break
+
+        if total_pages > 1:
+            await message.clear_reactions()
+
     except Exception as e:
         await ctx.send(f"List_alerts error: {e}")
 
@@ -73,13 +118,12 @@ async def check_stock_prices():
                     print(f"Failed to fetch price for {ticker}.")
                     continue
 
-                if current_price == target_price:
+                if current_price >= target_price:
                     channel = bot.get_channel(channel_id)
                     if channel:
-                        await channel.send(f"🚨 Alert: {ticker} has reached ${current_price:.2f} (target: ${target_price:.2f})")
-                    channel_alerts.remove(alert)  
+                        await channel.send(f"\ud83d\udea8 Alert: {ticker} has reached ${current_price:.2f} (target: ${target_price:.2f})")
+                    channel_alerts.remove(alert)
     except Exception as e:
         print(f"Error in check_stock_prices task: {e}")
-
 
 bot.run(BOT_TOKEN)
