@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import asyncio
 import yfinance as yf
 
-BOT_TOKEN = "MTMyNjc2MzQyODkxNTcwODAwNA.Gy-A7C.K0Y_pKuFNWdfRHYU45nvsjn3dRgL9LH0kGBZew"
+BOT_TOKEN = ""
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -57,7 +57,6 @@ async def list_alerts(ctx):
 
         message = await ctx.send(embed=create_embed())
 
-        # Add reactions
         if total_pages > 1:
             await message.add_reaction("⬅️")
             await message.add_reaction("➡️")
