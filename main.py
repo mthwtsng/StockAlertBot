@@ -2,15 +2,20 @@ import discord
 from discord.ext import commands, tasks
 import asyncio
 import yfinance as yf
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 BOT_TOKEN = ""
+uri = ""
+
+mongo_client = MongoClient(uri)
+db = mongo_client["StockAlertBot"]
+alerts_collection = db["alerts"]
 
 intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-alerts = {}
 
 @bot.event
 async def on_ready():
@@ -27,9 +32,13 @@ async def ping(ctx):
 @bot.command(name="add_alert")
 async def add_alert(ctx, ticker: str, price: float):
     try:
-        if ctx.channel.id not in alerts:
-            alerts[ctx.channel.id] = []
-        alerts[ctx.channel.id].append({"ticker": ticker.upper(), "price": price})
+        alert = {
+            "server_id": ctx.guild.id,
+            "channel_id": ctx.channel.id,
+            "ticker": ticker.upper(),
+            "price": price,
+        }
+        alerts_collection.insert_one(alert)
         await ctx.send(f"Alert added: {ticker.upper()} at ${price:.2f}")
     except Exception as e:
         await ctx.send(f"Add_alert error: {e}")
@@ -37,7 +46,7 @@ async def add_alert(ctx, ticker: str, price: float):
 @bot.command(name="list_alerts")
 async def list_alerts(ctx):
     try:
-        channel_alerts = alerts.get(ctx.channel.id, [])
+        channel_alerts = list(alerts_collection.find({"server_id": ctx.guild.id, "channel_id": ctx.channel.id}))
         if not channel_alerts:
             await ctx.send("No alerts set for this channel.")
             return
@@ -93,35 +102,46 @@ async def list_alerts(ctx):
 @bot.command(name="remove_alert")
 async def remove_alert(ctx, ticker: str, price: float):
     try:
-        channel_alerts = alerts.get(ctx.channel.id, [])
-        for alert in channel_alerts:
-            if alert["ticker"] == ticker.upper() and alert["price"] == price:
-                channel_alerts.remove(alert)
-                await ctx.send(f"Alert removed: {ticker.upper()} at ${price:.2f}")
-                return
-        await ctx.send(f"No alert found for {ticker.upper()} at ${price:.2f}")
+        result = alerts_collection.delete_one({
+            "server_id": ctx.guild.id,
+            "channel_id": ctx.channel.id,
+            "ticker": ticker.upper(),
+            "price": price,
+        })
+        if result.deleted_count > 0:
+            await ctx.send(f"Alert removed: {ticker.upper()} at ${price:.2f}")
+        else:
+            await ctx.send(f"No alert found for {ticker.upper()} at ${price:.2f}")
     except Exception as e:
         await ctx.send(f"Remove_alert error: {e}")
 
 @tasks.loop(seconds=5)
 async def check_stock_prices():
     try:
-        for channel_id, channel_alerts in alerts.items():
-            for alert in channel_alerts:
-                ticker = alert["ticker"]
-                target_price = alert["price"]
-                stock = yf.Ticker(ticker)
-                current_price = stock.info.get("regularMarketPrice", None)
+        alerts = list(alerts_collection.find())
+        print(f"Fetched {len(alerts)} alerts from the database.")
+        for alert in alerts:
+            ticker = alert["ticker"]
+            target_price = alert["price"]
+            stock = yf.Ticker(ticker)
+            current_price = stock.info.get("regularMarketPrice", None)
 
-                if current_price is None:
-                    print(f"Failed to fetch price for {ticker}.")
-                    continue
+            if current_price is None:
+                print(f"Failed to fetch price for {ticker}.")
+                continue
 
-                if current_price >= target_price:
-                    channel = bot.get_channel(channel_id)
-                    if channel:
-                        await channel.send(f"\ud83d\udea8 Alert: {ticker} has reached ${current_price:.2f} (target: ${target_price:.2f})")
-                    channel_alerts.remove(alert)
+            tolerance = target_price * 0.0005 
+            lower_bound = target_price - tolerance
+            upper_bound = target_price + tolerance
+
+            if lower_bound <= current_price <= upper_bound:
+                channel = bot.get_channel(alert["channel_id"])
+                if channel:
+                    await channel.send(
+                        f"\ud83d\udea8 Alert: {ticker} is within 0.05% of the target price! "
+                        f"Current price: ${current_price:.2f} (Target: ${target_price:.2f})"
+                    )
+                alerts_collection.delete_one({"_id": alert["_id"]})
     except Exception as e:
         print(f"Error in check_stock_prices task: {e}")
 
