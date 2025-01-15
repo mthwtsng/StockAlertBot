@@ -4,9 +4,9 @@ import asyncio
 import yfinance as yf
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+import pandas as pd
 
-BOT_TOKEN = ""
-uri = ""
+
 
 mongo_client = MongoClient(uri)
 db = mongo_client["StockAlertBot"]
@@ -19,7 +19,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"We have logged in as {bot.user}")
+    print(f"Logged in as {bot.user}")
     check_stock_prices.start()
 
 @bot.command(name="ping")
@@ -119,29 +119,36 @@ async def remove_alert(ctx, ticker: str, price: float):
 async def check_stock_prices():
     try:
         alerts = list(alerts_collection.find())
+        if not alerts:
+            print("No alerts found.")
+            return
+
+        alerts_df = pd.DataFrame(alerts)
         print(f"Fetched {len(alerts)} alerts from the database.")
-        for alert in alerts:
-            ticker = alert["ticker"]
-            target_price = alert["price"]
-            stock = yf.Ticker(ticker)
-            current_price = stock.info.get("regularMarketPrice", None)
 
-            if current_price is None:
-                print(f"Failed to fetch price for {ticker}.")
-                continue
+        tickers = alerts_df["ticker"].unique()
+        stock_data = {ticker: yf.Ticker(ticker).info.get("regularMarketPrice", None) for ticker in tickers}
 
-            tolerance = target_price * 0.0005 
-            lower_bound = target_price - tolerance
-            upper_bound = target_price + tolerance
+        alerts_df["current_price"] = alerts_df["ticker"].map(stock_data)
 
-            if lower_bound <= current_price <= upper_bound:
-                channel = bot.get_channel(alert["channel_id"])
-                if channel:
-                    await channel.send(
-                        f"\ud83d\udea8 Alert: {ticker} is within 0.05% of the target price! "
-                        f"Current price: ${current_price:.2f} (Target: ${target_price:.2f})"
-                    )
-                alerts_collection.delete_one({"_id": alert["_id"]})
+        alerts_df = alerts_df.dropna(subset=["current_price"])
+
+        alerts_df["tolerance"] = alerts_df["price"] * 0.0005
+        alerts_df["lower_bound"] = alerts_df["price"] - alerts_df["tolerance"]
+        alerts_df["upper_bound"] = alerts_df["price"] + alerts_df["tolerance"]
+
+        matching_alerts = alerts_df[
+            (alerts_df["current_price"] >= alerts_df["lower_bound"]) &
+            (alerts_df["current_price"] <= alerts_df["upper_bound"])
+        ]
+        for _, alert in matching_alerts.iterrows():
+            channel = bot.get_channel(alert["channel_id"])
+            if channel:
+                await channel.send(
+                    f"\ud83d\udea8 Alert: {alert['ticker']} is within 0.05% of the target price! "
+                    f"Current price: ${alert['current_price']:.2f} (Target: ${alert['price']:.2f})"
+                )
+            alerts_collection.delete_one({"_id": alert["_id"]})
     except Exception as e:
         print(f"Error in check_stock_prices task: {e}")
 
