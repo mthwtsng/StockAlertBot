@@ -33,17 +33,21 @@ Stock Alert Bot is a Discord bot built with Python that delivers real-time stock
 
 1. **Clone the Repository:**
 
-   ```bash
-   git clone https://github.com/yourusername/stock-alert-bot.git
-   cd stock-alert-bot
+  ```bash
+  git clone https://github.com/yourusername/stock-alert-bot.git
+  cd stock-alert-bot
 
 2. **Create and Activate a Virtual Environment**
 
-    python -m venv venv
-    # On macOS/Linux:
-    source venv/bin/activate
-    # On Windows:
-    venv\Scripts\activate
+  ```bash
+  python -m venv venv
+
+  # On macOS/Linux:
+  ```bash
+  source venv/bin/activate
+  #On Windows:
+  ```bash
+  venv\Scripts\activate
 
 3. **Install Dependencies**
 
