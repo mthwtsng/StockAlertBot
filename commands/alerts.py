@@ -27,8 +27,8 @@ class AlertsCog(commands.Cog):
         alerts_message = "\n".join([f"{a['ticker']} at ${a['price']:.2f}" for a in channel_alerts])
         await ctx.send(f"**Alerts:**\n{alerts_message}")
 
-    @commands.command(name="remove_alert")
-    async def remove_alert(self, ctx, ticker: str, price: float):
+    @commands.command(name="delete_alert")
+    async def delete_alert(self, ctx, ticker: str, price: float):
         result = db.delete_alert({
             "server_id": ctx.guild.id,
             "channel_id": ctx.channel.id,
