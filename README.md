@@ -61,23 +61,22 @@ Stock Alert Bot is a Discord bot built with Python that delivers real-time stock
     ```
 
 ## Configuration
-Before running the bot, configure your credentials and settings:
+ Before running the bot, configure your credentials and settings:
 
-Discord Bot Token:
+- **Discord Bot Token:**
 Update the BOT_TOKEN in config.py with your Discord bot token.
 
-MongoDB URI:
+- **MongoDB URI:**
 Set your MongoDB connection string in config.py.
 
-Cache Settings:
+- **Cache Settings:**
 Adjust CACHE_TTL (time-to-live) for the caching system if needed.
 
-Example config.py:
+Example `config.py`:
 
-python
-Copy
-Edit
+```bash
 # config.py
 BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
 MONGO_URI = "YOUR_MONGODB_URI"
 CACHE_TTL = 30  # Time-to-live for cached stock prices in seconds
+```
