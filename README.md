@@ -23,18 +23,15 @@ Stock Alert Bot is a Discord bot built with Python that delivers real-time stock
 
 - [Installation](#installation)
 - [Configuration](#configuration)
-- [Usage](#usage)
 - [Commands](#commands)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+
 
 ## Installation
 
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/yourusername/stock-alert-bot.git
+    git clone https://github.com/mthwtsng/StockAlertBot
     cd stock-alert-bot
     ```
 
@@ -80,3 +77,31 @@ BOT_TOKEN = "YOUR_DISCORD_BOT_TOKEN"
 MONGO_URI = "YOUR_MONGODB_URI"
 CACHE_TTL = 30  # Time-to-live for cached stock prices in seconds
 ```
+
+## Commands
+
+Stock Alert Bot provides the following commands to manage stock alerts and retrieve real-time market data.
+
+### 🔔 Alert Commands
+
+- **`!add_alert <symbol> <price>`**  
+  Sets an alert for a specific stock price. The bot will notify you when the stock reaches the specified price.  
+  **Example:**  
+  ```plaintext
+  !add_alert AAPL 150
+
+- **`!list_alerts`**  
+  Lists all existing alerts that have been created within the channel 
+
+
+- **`!delete_alert <symbol> <price>`**  
+  Deletes an alert set for a specific stock price. 
+  **Example:**  
+  ```plaintext
+  !remove_alert AAPL 150
+
+- **`!delete_all` (SERVER ADMIN(S) ONLY)**
+  Deletes all alerts that are set within the channel
+  
+
+**More to come ...** 
