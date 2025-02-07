@@ -89,7 +89,6 @@ Stock Alert Bot provides the following commands to manage stock alerts and retri
   **Example:**  
   ```plaintext
   !add_alert AAPL 150
-
 - **`!list_alerts`**  
   Lists all existing alerts that have been created within the channel 
 
@@ -99,9 +98,8 @@ Stock Alert Bot provides the following commands to manage stock alerts and retri
   **Example:**  
   ```plaintext
   !remove_alert AAPL 150
-
 - **`!delete_all` (SERVER ADMIN(S) ONLY)**
-  Deletes all alerts that are set within the channel
+  Deletes all alerts that are set within the channel.
   
 
 **More to come ...** 
